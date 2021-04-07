@@ -4,5 +4,6 @@ exports.configurationData = {
     playerDataTemplate:{
         tag: "",        
         name:"Player"
-    }
+    },
+  defaultIslandSize: 1
 }

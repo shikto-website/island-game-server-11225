@@ -25,8 +25,8 @@ var GLOBAL_ROOM = {};
 
 var GlobalIslandData = {
     seed: parseInt(Math.random() * 9999999),
-    islandSize: 10
-}
+    islandSize: config.defaultIslandSize
+} 
 
 qs.On("login", (tag, user)=>{
     if(player.PlayerExists(tag)){
@@ -57,7 +57,7 @@ qs.On("joinGlobal", (tag, user)=>{
         tag: tag + "",
 
         positionX: 0.00,
-        positionY: 200.00,
+        positionY: 1000.00,
         positionZ: 0.00,
 
         rotationX: 0.00,
@@ -87,6 +87,10 @@ qs.On("updateCharacterData", (data, user)=>{
         }        
     }
 })
+qs.On("ping", (data, user)=>{
+    user.Send("ping", "");
+})
+
 
 function SendGlobalRoomData() {
     for(i in GLOBAL_ROOM){
