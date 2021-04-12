@@ -1,26 +1,28 @@
 var functions = {};
 var users = {};
+var userID = {};
 
 exports.On = (triggerName, callBack)=> {
     functions[triggerName] = callBack;
 }
 
-exports.CheckMessage = (message, ws)=>{
+exports.CheckMessage = async (message, ws, userID)=>{
     var msgJSON = JSON.parse(message);
     console.log("CHECK: " + message);
     var head = msgJSON.head;
     var body = msgJSON.body;
     if(functions[head]){
         functions[head](body, {
-            Send:(head, data)=>{
+            Send: async (head, data)=>{
                 this.Send(head, data, ws)
-            }
+            },
+            userID: userID
         });
         console.log("CALLED: " + head + " : " + body);
     }
 }
 
-exports.Send = (h, b, recepient)=>{
+exports.Send = async (h, b, recepient)=>{
     var dataPack = {
         head: h,
         body: (typeof b == "object") ? JSON.stringify(b) : (b + "")
@@ -29,18 +31,30 @@ exports.Send = (h, b, recepient)=>{
     console.log("SEND: " + h + " : " + JSON.stringify(dataPack));
 }
 
-exports.SendToUser = (tag, head, body)=>{
+exports.SendToUser = async (tag, head, body)=>{
     if(users[tag]){
         users[tag].Send(head, body);
     }    
 }
 
-exports.SetUser = (tag, handle)=>{
+exports.SetUser = async (tag, handle)=>{
     users[tag] = handle;
+}
+
+exports.GetUserTag = (handle)=>{
+    for(i in users){
+        if(handle.userID == users[i].userID){
+            return i;
+        }
+    }
 }
 
 exports.RemoveUser = (tag)=>{
     if(users[tag]){
         users[tag] = undefined;
     }
+}
+
+exports.NewID = ()=>{
+    return Date.now() + (Math.random() * 100000000)
 }

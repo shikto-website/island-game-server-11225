@@ -1,5 +1,6 @@
 var fs = require("fs");
 var config = require("./config.js").configurationData;
+var PLAYERS = {};
 
 exports.PlayerExists = (tag)=>{
     if(tag != ""){
@@ -8,11 +9,17 @@ exports.PlayerExists = (tag)=>{
 }
 
 exports.PlayerData = (tag)=>{
-    if(this.PlayerExists(tag)){
-        return JSON.parse(fs.readFileSync(this.PathToPlayerData(tag), "utf8"));
-    }else{
-        return this.DefaultPlayerData()
+    if(PLAYERS[tag]){
+        return PLAYERS[tag];
     }
+    var playerData;
+    if(this.PlayerExists(tag)){
+        playerData = JSON.parse(fs.readFileSync(this.PathToPlayerData(tag), "utf8"));
+        PLAYERS[tag] = playerData;
+    }else{
+        playerData = this.DefaultPlayerData()
+    }
+    return playerData;
 }
 
 exports.DefaultPlayerData = ()=>{
