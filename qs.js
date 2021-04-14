@@ -58,3 +58,10 @@ exports.RemoveUser = (tag)=>{
 exports.NewID = ()=>{
     return Date.now() + (Math.random() * 100000000)
 }
+
+exports.EvaluateOn = (head, body, user)=>{
+    var func = functions[head]
+    if(func){
+        func(body, user)
+    }
+}

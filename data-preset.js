@@ -28,7 +28,6 @@ exports.DataPreset = {
         constructor({tag, name, gameData, players}){
             this.tag = tag || "#"
             this.name = name || ""
-            this.gameData = gameData || null
             this.players = players || {}
         }
 

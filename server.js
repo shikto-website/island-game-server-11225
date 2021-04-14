@@ -36,9 +36,11 @@ qs.On("disconnect", (data, user)=>{
     var playerTag = qs.GetUserTag(user)
     console.log(playerTag);
     if(PLAYERDOING[playerTag]){
-        if(PLAYERDOING[playerTag].type == "lobby"){
-            LOBBYROOMS[PLAYERDOING[playerTag].data].RemovePlayer(playerTag);
-            SendLobbyData(LOBBYROOMS[PLAYERDOING[playerTag].data]);
+        var doingType = PLAYERDOING[playerTag].type;
+        if(doingType == "lobby"){            
+            qs.EvaluateOn("quitLobbyRoom", PLAYERDOING[playerTag].data + "," + playerTag, user)
+        }else if(doingType == "game"){
+            
         }
     }
 })
@@ -63,7 +65,7 @@ qs.On("setPlayerName", (data, user)=>{
 })
 
 qs.On("playerData", async (data, user)=>{
-    var data = JSON.stringify(player.PlayerData(data));
+    var data = JSON.stringify(Player.PlayerData(data));
     user.Send("playerData", data);
 })
 
@@ -77,6 +79,35 @@ qs.On("lobbyList", async(data, user)=>{
         }) + ";";
     }
     user.Send("lobbyList", lobbyList);
+})
+
+qs.On("quitLobbyRoom", async(data, user)=>{
+    var bData = data.split(",")
+    var roomTag = bData[0]
+    var playerTag = bData[1]
+    var ROOM = LOBBYROOMS[roomTag]
+    console.log(JSON.stringify(ROOM));
+    if(ROOM.players[playerTag] && Object.keys(ROOM.players).length == 1){
+        delete LOBBYROOMS[roomTag];
+        return;
+    }
+
+    if(ROOM.players[playerTag].host == true){
+        for(i in ROOM.players){
+            if(i != playerTag){
+                ROOM.players[i].host = true;
+                qs.SendToUser(i, "beHost", "");
+                break;
+            }
+        }
+    }
+
+    for(i in ROOM.players){
+        qs.SendToUser(i, "notification", ROOM.players[playerTag].name + " has quit the room")
+    }
+
+    ROOM.RemovePlayer(playerTag)
+    SendLobbyPlayersData(ROOM);
 })
 
 qs.On("joinLobbyRoom", (data, user)=>{
@@ -95,14 +126,70 @@ qs.On("joinLobbyRoom", (data, user)=>{
             type: "lobby",
             data: roomTag
         }
-        user.Send("joinLobbyRoom", ROOM.tag + "," + ROOM.name);  
-        SendLobbyData(ROOM);    
+        user.Send("joinLobbyRoom", ROOM.tag + "," + ROOM.name); 
+        
+        for(i in ROOM.players){
+            qs.SendToUser(i, "notification", Player.PlayerData(playerTag).name + "has Joined the room")
+        }
+        
+        SendLobbyPlayersData(ROOM);    
     }else{
-        user.Send("noRoom", roomTag);
+        user.Send("notification", "That room doesn't exist");
     }
 })
 
-function SendLobbyData(ROOM) {
+qs.On("createLobbyRoom", (playerTag, user)=>{
+    LOBBYROOMS[playerTag] = new DataPreset.LobbyRoom({
+        tag: playerTag,
+        name: Player.PlayerData(playerTag).name
+    })
+    LOBBYROOMS[playerTag].AddPlayer({
+        tag: playerTag,
+        name: Player.PlayerData(playerTag).name,
+        host: true
+    });
+    user.Send("joinLobbyRoom", LOBBYROOMS[playerTag].tag + "," + LOBBYROOMS[playerTag].name);
+    PLAYERDOING[playerTag] = {
+        type: "lobby",
+        data: playerTag
+    }
+    SendLobbyPlayersData(LOBBYROOMS[playerTag]);    
+    user.Send("beHost", "");
+})
+
+qs.On("startGame", (data, user)=>{
+    var bData = data.split(",")
+    var roomTag = bData[0]
+    var seed = bData[1]
+    var size = bData[2]
+    var ROOM = LOBBYROOMS[roomTag]
+    if(ROOM){
+        for(i in ROOM.players){
+            PLAYERDOING[i] = {
+                type: "game",
+                data: roomTag
+            }
+            qs.SendToUser(i, "startGame", seed + "," + size)
+        }
+    }
+    delete ROOM;
+})
+
+qs.On("updateCharacterData", (data, user)=>{
+    var bData = data.split(",");
+    var tag = bData[0];
+    GAMEROOMS[tag] = data;
+    var result = "";
+    for(i in GAMEROOMS){
+        if(i != tag){
+            result += GAMEROOMS[i] + ";";
+        }
+    }
+    user.Send("playerStateSync", result);
+})
+
+//---------------------------------------------
+function SendLobbyPlayersData(ROOM) {
     var playersDataRaw = "";
     for(i in ROOM.players){
         if(ROOM.players[i] != null){
@@ -113,10 +200,3 @@ function SendLobbyData(ROOM) {
         qs.SendToUser(i, "lobbyRoomPlayersSync", playersDataRaw)
     } 
 }
-
-LOBBYROOMS.tag1 = new DataPreset.LobbyRoom({});
-LOBBYROOMS.tag1.name = "SS"
-LOBBYROOMS.tag2 = new DataPreset.LobbyRoom({});
-LOBBYROOMS.tag2.name = "HH"
-LOBBYROOMS.tag3 = new DataPreset.LobbyRoom({});
-LOBBYROOMS.tag3.name = "RR"
